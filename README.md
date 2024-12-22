@@ -45,6 +45,10 @@ For details of the `workflow_dispatch` even see [this blog post introducing this
 > **Optional.** The default behavior is to get the remote run ID based on the latest workflow name and date, if you have multiple of the same workflow running at the same time it can point to an incorrect run id.
 > To prevent from this, you can specify a unique run name to fetch the concerned run ID. It will also requires you to set that same value as an input for your remote workflow (See the [corresponding example](#invoke-workflow-with-a-unique-run-name-since-300))
 
+### `run-id`
+
+> The ID of an existing workflow that you want to resume
+
 ### `wait-for-completion`
 
 > **Optional.** If `true`, this action will actively poll the workflow run to get the result of the triggered workflow. It is enabled by default. If the triggered workflow fails due to either `failure`, `timed_out` or `cancelled` then the step that has triggered the other workflow will be marked as failed too.
