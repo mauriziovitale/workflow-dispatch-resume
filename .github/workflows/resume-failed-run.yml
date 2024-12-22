@@ -1,0 +1,20 @@
+name: Failing
+
+on:
+  workflow_dispatch:
+
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail on first attempt
+        if: ${{ github.run_attempt == 1 }}
+        run: |
+          echo "RunId: ${{ github.run_id }}"
+          echo "runId=${{ github.run_id }}" >> $GITHUB_OUTPUT
+          echo "Simulating failing on first attempt"
+          exit 1
+      - name: Pass on second attempt
+        if: ${{ github.run_attempt > 1 }}
+        run: |
+          echo "Simulating passing on second attempt"

@@ -136,6 +136,36 @@ jobs:
       with:
         expected: failure
         actual: ${{ steps.failing-workflow.outcome }}
+  
+  resuming-workflow:
+    needs: [build]
+    runs-on: ubuntu-latest
+    name: "resuming-workflow [trigger+wait|by workflow filename|should report success]"
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+    - name: Download dist
+      uses: actions/download-artifact@v3
+      with:
+        name: build
+        path: dist
+    - name: Invoke 'resume-failed-run' workflow and wait for result using this action
+      id: resume-failed-run-workflow
+      uses: ./
+      with:
+        workflow: resume-failed-run.yml
+        token: ${{ secrets.PERSONAL_TOKEN }}
+        wait-for-completion-interval: 10s
+        wait-for-completion-timeout: 60s
+      continue-on-error: true
+    - name: Resume previous failed run
+      uses: ./
+      with:
+        workflow: resume-failed-run.yml
+        token: ${{ secrets.PERSONAL_TOKEN }}
+        run-id: ${{ steps.resume-failed-run-workflow.outputs.workflow-id }}
+        wait-for-completion-interval: 10s
+        wait-for-completion-timeout: 60s
 
   timeout-test:
     needs: [build]

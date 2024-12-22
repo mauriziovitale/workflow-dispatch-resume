@@ -29355,10 +29355,17 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const args = (0, utils_1.getArgs)();
-            const workflowHandler = new workflow_handler_1.WorkflowHandler(args.token, args.workflowRef, args.owner, args.repo, args.ref, args.runName);
-            // Trigger workflow run
-            yield workflowHandler.triggerWorkflow(args.inputs);
-            core.info('Workflow triggered 🚀');
+            const workflowHandler = new workflow_handler_1.WorkflowHandler(args.token, args.workflowRef, args.owner, args.repo, args.ref, args.runName, args.runId);
+            if (args.runId) {
+                core.info(`Using existing workflow run ID: ${args.runId}`);
+                const status = yield workflowHandler.rerunFailedJobs();
+                core.info(`Response status ${status}`);
+            }
+            else {
+                // Trigger workflow run
+                yield workflowHandler.triggerWorkflow(args.inputs);
+                core.info('Workflow triggered 🚀');
+            }
             if (args.displayWorkflowUrl) {
                 const url = yield getFollowUrl(workflowHandler, args.displayWorkflowUrlInterval, args.displayWorkflowUrlTimeout);
                 core.info(`You can follow the running workflow here: ${url}`);
@@ -29465,6 +29472,7 @@ function getArgs() {
     const waitForCompletionTimeout = toMilliseconds(core.getInput('wait-for-completion-timeout'));
     const checkStatusInterval = toMilliseconds(core.getInput('wait-for-completion-interval'));
     const runName = core.getInput('run-name');
+    const runId = core.getInput('run-id');
     const workflowLogMode = core.getInput('workflow-logs');
     return {
         token,
@@ -29480,6 +29488,7 @@ function getArgs() {
         waitForCompletion,
         waitForCompletionTimeout,
         runName,
+        runId,
         workflowLogMode
     };
 }
@@ -29589,13 +29598,17 @@ const ofConclusion = (conclusion) => {
     return WorkflowRunConclusion[key];
 };
 class WorkflowHandler {
-    constructor(token, workflowRef, owner, repo, ref, runName) {
+    constructor(token, workflowRef, owner, repo, ref, runName, runId) {
         this.workflowRef = workflowRef;
         this.owner = owner;
         this.repo = repo;
         this.ref = ref;
         this.runName = runName;
+        this.runId = runId;
         this.triggerDate = 0;
+        if (runId) {
+            this.workflowRunId = parseInt(runId);
+        }
         // Get octokit client for making API calls
         this.octokit = github.getOctokit(token);
     }
@@ -29615,6 +29628,24 @@ class WorkflowHandler {
             }
             catch (error) {
                 (0, debug_1.debug)('Workflow Dispatch error', error.message);
+                throw error;
+            }
+        });
+    }
+    rerunFailedJobs() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const runId = yield this.getWorkflowRunId();
+                const response = yield this.octokit.rest.actions.reRunWorkflowFailedJobs({
+                    owner: this.owner,
+                    repo: this.repo,
+                    run_id: runId
+                });
+                (0, debug_1.debug)('Restarting failed jobs', response);
+                return response.status;
+            }
+            catch (error) {
+                (0, debug_1.debug)('Workflow Re-run status error', error);
                 throw error;
             }
         });

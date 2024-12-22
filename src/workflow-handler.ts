@@ -54,7 +54,11 @@ export class WorkflowHandler {
     private owner: string,
     private repo: string,
     private ref: string,
-    private runName: string) {
+    private runName: string,
+    private runId: string) {
+    if (runId) {
+      this.workflowRunId = parseInt(runId)
+    }
     // Get octokit client for making API calls
     this.octokit = github.getOctokit(token)
   }
@@ -73,6 +77,25 @@ export class WorkflowHandler {
       debug('Workflow Dispatch', dispatchResp)
     } catch (error: any) {
       debug('Workflow Dispatch error', error.message)
+      throw error
+    }
+  }
+
+  async rerunFailedJobs(): Promise<string> {
+    try {
+      const runId = await this.getWorkflowRunId()
+      const response = await this.octokit.rest.actions.reRunWorkflowFailedJobs({
+        owner: this.owner,
+        repo: this.repo,
+        run_id: runId
+      })
+
+      debug('Restarting failed jobs', response)
+
+      return response.status
+
+    } catch (error: any) {
+      debug('Workflow Re-run status error', error)
       throw error
     }
   }
